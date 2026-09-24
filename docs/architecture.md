@@ -175,3 +175,267 @@ The system must not hide an external API failure by treating it as a database fa
 ### Design principle
 
 > Persistence is an enhancement to APIForge, not a dependency required for its core API execution capability.
+
+## 3. Backend Module Structure
+
+The initial APIForge backend will be a modular monolith built with Spring Boot.
+
+The modules will have clearly defined responsibilities.
+
+```text
+com.apiforge
+│
+├── request
+│   ├── controller
+│   ├── service
+│   ├── dto
+│   └── repository
+│
+├── execution
+│   ├── controller
+│   ├── service
+│   ├── dto
+│   └── client
+│
+├── collection
+│   ├── controller
+│   ├── service
+│   └── repository
+│
+├── environment
+│   ├── controller
+│   ├── service
+│   └── resolver
+│
+├── history
+│   ├── controller
+│   ├── service
+│   └── repository
+│
+├── persistence
+│   ├── postgres
+│   └── inmemory
+│
+├── ai
+│   ├── service
+│   └── provider
+│
+└── common
+    ├── exception
+    ├── configuration
+    └── logging
+```
+
+### 3.1 Request Module
+
+Responsible for managing API requests saved by the user.
+
+Responsibilities include:
+
+* Create a request
+* Retrieve a request
+* Update a request
+* Delete a request
+* Store HTTP method
+* Store URL
+* Store headers
+* Store query parameters
+* Store request body
+
+The request module does not execute the API.
+
+Execution belongs to the Execution module.
+
+---
+
+### 3.2 Execution Module
+
+The Execution module is the core of APIForge.
+
+It is responsible for:
+
+* Receiving an API execution request
+* Resolving environment variables
+* Building the HTTP request
+* Sending the request to the external API
+* Measuring response time
+* Capturing response status
+* Capturing response headers
+* Capturing response body
+* Handling execution errors
+* Returning the result to the frontend
+
+Example:
+
+```text
+POST /api/executions
+
+Request
+{
+    "method": "GET",
+    "url": "https://example.com/users",
+    "headers": {},
+    "queryParams": {}
+}
+```
+
+The Execution module sends the request and returns information such as:
+
+```text
+Status: 200
+Response Time: 142 ms
+Headers: ...
+Body: ...
+```
+
+---
+
+### 3.3 Collection Module
+
+Responsible for organizing saved API requests.
+
+Users should eventually be able to create structures such as:
+
+```text
+My APIs
+│
+├── User Service
+│   ├── Get User
+│   ├── Create User
+│   └── Delete User
+│
+└── Payment Service
+    ├── Create Payment
+    └── Payment Status
+```
+
+The Collection module manages this organization.
+
+---
+
+### 3.4 Environment Module
+
+Responsible for environment-specific variables.
+
+Example environments:
+
+```text
+Development
+    BASE_URL = http://localhost:8080
+    USER_ID = 101
+
+QA
+    BASE_URL = https://qa.example.com
+    USER_ID = 202
+
+Production
+    BASE_URL = https://api.example.com
+    USER_ID = 303
+```
+
+The environment resolver converts:
+
+```text
+{{BASE_URL}}/users/{{USER_ID}}
+```
+
+into:
+
+```text
+https://qa.example.com/users/202
+```
+
+The resolved value is then provided to the Execution module.
+
+---
+
+### 3.5 History Module
+
+Responsible for storing information about previous API executions.
+
+A history record may contain:
+
+* Request name
+* HTTP method
+* URL
+* Status code
+* Response time
+* Timestamp
+* Response body
+
+History is useful for debugging and understanding previous API behavior.
+
+---
+
+### 3.6 Persistence Module
+
+The Persistence module abstracts storage from the rest of the application.
+
+The application should interact with a storage abstraction rather than directly depending on PostgreSQL.
+
+Conceptually:
+
+```text
+             ┌───────────────────┐
+             │ Storage Interface │
+             └─────────┬─────────┘
+                       │
+              ┌────────┴────────┐
+              │                 │
+              ▼                 ▼
+       PostgreSQL          In-Memory
+        Storage             Storage
+```
+
+This design allows APIForge to use PostgreSQL when available and fall back to in-memory storage when required.
+
+---
+
+### 3.7 AI Module
+
+AI functionality will be introduced after the core API client is working.
+
+The AI module will provide an abstraction over AI providers.
+
+Potential capabilities include:
+
+* Generate API test cases
+* Analyze API responses
+* Explain API errors
+* Generate API documentation
+* Suggest debugging steps
+
+The rest of APIForge should communicate with an AI abstraction rather than directly depending on a specific AI provider.
+
+Conceptually:
+
+```text
+APIForge
+   │
+   ▼
+AIProvider
+   │
+   ├── Provider A
+   │
+   └── Provider B
+```
+
+This reduces provider lock-in and allows the implementation to change later.
+
+---
+
+### 3.8 Common Module
+
+Contains functionality shared across multiple modules.
+
+Examples:
+
+* Global exception handling
+* Common response models
+* Configuration
+* Logging
+* Validation utilities
+
+Common code should remain limited to genuinely shared functionality.
+
+Modules should not put unrelated business logic into the common package.
