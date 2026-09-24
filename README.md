@@ -31,5 +31,4 @@ Project documentation is available in the [`docs`](./docs) directory.
 The technology stack will be introduced incrementally as the project develops.
 
 ## License
-
 To be decided.
